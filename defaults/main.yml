@@ -75,6 +75,7 @@ consul_iface: "\
   {% else %}\
     {{ lookup('env','CONSUL_IFACE') | default(ansible_default_ipv4.interface, true) }}\
   {% endif %}"
+consul_wan_iface: "{{ lookup('env','CONSUL_WAN_IFACE') | default(consul_iface, true) }}"
 consul_node_role: "{{ lookup('env','CONSUL_NODE_ROLE') | default('client', true) }}"
 consul_recursors: "{{ lookup('env','CONSUL_RECURSORS') | default('[]', true) }}"
 consul_bootstrap_expect: "{{ lookup('env','CONSUL_BOOTSTRAP_EXPECT') | default(false, true) }}"
@@ -115,7 +116,8 @@ consul_cloud_autodiscovery_params: ""
 consul_cloud_autodiscovery_string: "provider={{ consul_cloud_autodiscovery_provider }} {{ consul_cloud_autodiscovery_params }}"
 
 ### Addresses
-consul_bind_address: "\
+consul_bind_address: "0.0.0.0"
+consul_lan_address: "\
   {% if ansible_system == 'FreeBSD' %}\
     {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface ]['ipv4'][0]['address'], true) }}\
   {% elif ansible_os_family == 'Windows'  %}\
@@ -123,9 +125,17 @@ consul_bind_address: "\
   {% else %}\
     {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface | replace('-', '_')]['ipv4']['address'], true) }}\
   {% endif %}"
-consul_advertise_address: "{{ consul_bind_address }}"
-consul_advertise_address_wan: "{{ consul_bind_address }}"
-consul_translate_wan_address: false
+consul_wan_address: "\
+  {% if ansible_system == 'FreeBSD' %}\
+    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_wan_iface ]['ipv4'][0]['address'], true) }}\
+  {% elif ansible_os_family == 'Windows'  %}\
+    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_ip_addresses'][0], true) }}\
+  {% else %}\
+    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_wan_iface | replace('-', '_')]['ipv4']['address'], true) }}\
+  {% endif %}"
+consul_advertise_address: "{{ consul_lan_address }}"
+consul_advertise_address_wan: "{{ consul_wan_address }}"
+consul_translate_wan_address: true
 consul_advertise_addresses:
   serf_lan: "{{ consul_advertise_addresses_serf_lan | default(consul_advertise_address+':'+consul_ports.serf_lan) }}"
   serf_wan: "{{ consul_advertise_addresses_serf_wan | default(consul_advertise_address_wan+':'+consul_ports.serf_wan) }}"
