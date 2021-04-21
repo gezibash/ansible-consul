@@ -29,6 +29,7 @@
         group: "{{ consul_group }}"
         mode: 0644
       notify: restart consul
+      when: inventory_hostname in consul_servers
 
     - name: Copy server key
       copy:
@@ -39,5 +40,6 @@
         group: "{{ consul_group }}"
         mode: 0600
       notify: restart consul
+      when: inventory_hostname in consul_servers
 
   when: consul_tls_copy_keys | bool
